@@ -73,6 +73,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/labs/:contentId" 
+              element={
+                <ProtectedRoute>
+                  <ContentViewer />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +48,20 @@ const parseQuizContent = (content: Json): QuizQuestion[] => {
     console.error("Error parsing quiz content:", error);
     return [];
   }
+};
+
+// Helper function to convert QuizQuestion[] to Json compatible format
+const convertQuestionsToJson = (questions: QuizQuestion[]): Json => {
+  return {
+    questions: questions.map(q => ({
+      id: q.id,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
+      bloomLevel: q.bloomLevel,
+      explanation: q.explanation
+    }))
+  } as Json;
 };
 
 const demoQuizQuestions: QuizQuestion[] = [
@@ -211,10 +224,8 @@ const QuizViewer = () => {
       setIsSaving(true);
       
       try {
-        // Properly format the content as a JSON object
-        const quizContent: Json = {
-          questions: quiz.questions
-        };
+        // Use the helper function to properly convert the quiz questions to Json
+        const quizContent = convertQuestionsToJson(quiz.questions);
         
         const { data, error } = await supabase
           .from("content")

@@ -14,16 +14,23 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const GeneratorForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     topic: "",
     grade: "",
     contentType: "lesson",
     contentText: "",
     videoUrl: "",
+    subject: "",
   });
 
   const handleInputChange = (
@@ -39,22 +46,63 @@ const GeneratorForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login to generate content.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Simulate loading and processing
     toast({
       title: "Processing your request",
       description: "Our AI is generating your content...",
     });
 
-    // Simulate API call delay
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Call the Supabase Edge Function to generate content
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: {
+          topic: formData.topic,
+          gradeLevel: formData.grade,
+          contentType: formData.contentType,
+          additionalContext: formData.contentText,
+          videoUrl: formData.videoUrl,
+          subject: formData.subject
+        }
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Content generated successfully!",
-        description: "Your lesson materials are ready to review.",
+        description: "Your educational materials are ready to review.",
       });
-    }, 2500);
+
+      if (data?.contentId) {
+        // Navigate to the appropriate content viewer based on content type
+        if (formData.contentType === 'quiz') {
+          navigate(`/quizzes/${data.contentId}`);
+        } else if (formData.contentType === 'lab') {
+          navigate(`/labs/${data.contentId}`);
+        } else {
+          navigate(`/content/${data.contentId}`);
+        }
+      }
+    } catch (error) {
+      console.error("Generation error:", error);
+      toast({
+        title: "Generation failed",
+        description: "There was an error generating your content. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -79,7 +127,7 @@ const GeneratorForm = () => {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="grade">Grade Level</Label>
               <Select 
@@ -94,6 +142,28 @@ const GeneratorForm = () => {
                   <SelectItem value="middle">Middle School</SelectItem>
                   <SelectItem value="high">High School</SelectItem>
                   <SelectItem value="college">College</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Select 
+                onValueChange={(value) => handleSelectChange("subject", value)}
+                value={formData.subject}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="math">Mathematics</SelectItem>
+                  <SelectItem value="science">Science</SelectItem>
+                  <SelectItem value="history">History</SelectItem>
+                  <SelectItem value="english">English</SelectItem>
+                  <SelectItem value="art">Art</SelectItem>
+                  <SelectItem value="music">Music</SelectItem>
+                  <SelectItem value="computerscience">Computer Science</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -182,7 +252,7 @@ const GeneratorForm = () => {
         <Button variant="outline">Cancel</Button>
         <Button 
           onClick={handleSubmit} 
-          disabled={isLoading || !formData.topic || !formData.grade}
+          disabled={isLoading || !formData.topic || !formData.grade || !formData.subject}
         >
           {isLoading ? "Generating..." : "Generate Content"}
         </Button>
