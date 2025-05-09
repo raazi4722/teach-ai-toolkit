@@ -6,10 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const AuthForm = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -25,28 +29,27 @@ const AuthForm = () => {
     setIsLoading(true);
     
     try {
-      // In a real app, this would authenticate with Supabase
-      console.log("Login with:", formData);
-      toast({
-        title: "Info",
-        description: "Login functionality will be implemented with Supabase integration.",
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       });
-      // Simulate success for now
-      setTimeout(() => {
-        // On success, redirect to dashboard (will be implemented later)
-        toast({
-          title: "Success",
-          description: "Logged in successfully!",
-        });
-        setIsLoading(false);
-      }, 1500);
-    } catch (error) {
+
+      if (error) throw error;
+
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully logged in.",
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
       console.error("Login error:", error);
       toast({
-        title: "Error",
-        description: "Failed to login. Please try again.",
+        title: "Login failed",
+        description: error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -56,38 +59,84 @@ const AuthForm = () => {
     setIsLoading(true);
     
     try {
-      // In a real app, this would sign up with Supabase
-      console.log("Signup with:", formData);
-      toast({
-        title: "Info",
-        description: "Signup functionality will be implemented with Supabase integration.",
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            email: formData.email,
+          },
+        }
       });
-      // Simulate success for now
-      setTimeout(() => {
+
+      if (error) throw error;
+
+      toast({
+        title: "Account created!",
+        description: "Please check your email to confirm your account.",
+      });
+
+      // If email confirmation is disabled in Supabase, automatically redirect
+      if (data?.user && !data.session) {
         toast({
-          title: "Success",
-          description: "Account created successfully!",
+          title: "Email verification required",
+          description: "Please check your email to confirm your account before logging in."
         });
-        setIsLoading(false);
-      }, 1500);
-    } catch (error) {
+      } else if (data?.session) {
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
       console.error("Signup error:", error);
       toast({
-        title: "Error",
-        description: "Failed to create account. Please try again.",
+        title: "Signup failed",
+        description: error.message || "Please try again with a different email.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!formData.email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address to reset your password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email);
+
+      if (error) throw error;
+
+      toast({
+        title: "Password reset email sent",
+        description: "Check your inbox for instructions to reset your password.",
+      });
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      toast({
+        title: "Reset failed",
+        description: error.message || "Failed to send reset password email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-md mx-auto animate-fade-in">
+    <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-muted/30">
+      <Card className="w-full max-w-md mx-auto animate-fade-in shadow-lg">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Teacher Toolkit</CardTitle>
           <CardDescription className="text-center">
-            Login or create an account to get started
+            Create AI-powered educational content in seconds
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,7 +147,7 @@ const AuthForm = () => {
             </TabsList>
             
             <TabsContent value="login">
-              <form onSubmit={handleLogin}>
+              <form onSubmit={handleLogin} className="animate-fade-in">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
@@ -110,12 +159,21 @@ const AuthForm = () => {
                       required
                       value={formData.email}
                       onChange={handleChange}
+                      disabled={isLoading}
+                      className="transition-all"
                     />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="login-password">Password</Label>
-                      <Button variant="link" size="sm" className="text-xs p-0 h-auto">
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="text-xs p-0 h-auto"
+                        type="button"
+                        disabled={isLoading}
+                        onClick={handleResetPassword}
+                      >
                         Forgot password?
                       </Button>
                     </div>
@@ -126,17 +184,30 @@ const AuthForm = () => {
                       required
                       value={formData.password}
                       onChange={handleChange}
+                      disabled={isLoading}
+                      className="transition-all"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Logging in..." : "Login"}
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Logging in...
+                      </>
+                    ) : (
+                      "Login"
+                    )}
                   </Button>
                 </div>
               </form>
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignup}>
+              <form onSubmit={handleSignup} className="animate-fade-in">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
@@ -148,6 +219,8 @@ const AuthForm = () => {
                       required
                       value={formData.email}
                       onChange={handleChange}
+                      disabled={isLoading}
+                      className="transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -159,10 +232,23 @@ const AuthForm = () => {
                       required
                       value={formData.password}
                       onChange={handleChange}
+                      disabled={isLoading}
+                      className="transition-all"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Creating account..." : "Create account"}
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      "Create account"
+                    )}
                   </Button>
                 </div>
               </form>

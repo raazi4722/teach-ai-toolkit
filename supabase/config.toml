@@ -1,1 +1,5 @@
+
 project_id = "ordxahebllywthrmpadt"
+
+[functions.generate-content]
+verify_jwt = true

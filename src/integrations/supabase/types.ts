@@ -9,7 +9,114 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ai_generations: {
+        Row: {
+          created_at: string | null
+          generation_time: number | null
+          id: string
+          model: string
+          prompt: string
+          result: Json
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          generation_time?: number | null
+          id?: string
+          model: string
+          prompt: string
+          result: Json
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          generation_time?: number | null
+          id?: string
+          model?: string
+          prompt?: string
+          result?: Json
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      content: {
+        Row: {
+          bloom_tags: string[] | null
+          content: Json
+          created_at: string | null
+          description: string | null
+          grade_level: string | null
+          id: string
+          status: string | null
+          subject: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bloom_tags?: string[] | null
+          content: Json
+          created_at?: string | null
+          description?: string | null
+          grade_level?: string | null
+          id?: string
+          status?: string | null
+          subject?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bloom_tags?: string[] | null
+          content?: Json
+          created_at?: string | null
+          description?: string | null
+          grade_level?: string | null
+          id?: string
+          status?: string | null
+          subject?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          role: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          role?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
