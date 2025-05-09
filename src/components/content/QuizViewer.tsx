@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Save, Share2, Download } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Json } from "@/integrations/supabase/types";
 
 interface QuizQuestion {
   id: string;
@@ -29,6 +30,26 @@ interface Quiz {
   createdAt: string;
   updatedAt: string;
 }
+
+// Helper function to safely parse JSON content
+const parseQuizContent = (content: Json): QuizQuestion[] => {
+  try {
+    if (typeof content === 'object' && content !== null && 'questions' in content) {
+      return (content.questions as any[]).map(q => ({
+        id: q.id || `q${Math.random().toString(36).substring(2, 10)}`,
+        question: q.question || "",
+        options: Array.isArray(q.options) ? q.options : [],
+        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+        bloomLevel: q.bloomLevel || "remember",
+        explanation: q.explanation || ""
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error parsing quiz content:", error);
+    return [];
+  }
+};
 
 const demoQuizQuestions: QuizQuestion[] = [
   {
@@ -124,12 +145,13 @@ const QuizViewer = () => {
         if (error) throw error;
         
         if (data) {
+          const quizQuestions = parseQuizContent(data.content);
           setQuiz({
             id: data.id,
             title: data.title,
             subject: data.subject || "",
             grade: data.grade_level || "",
-            questions: data.content.questions,
+            questions: quizQuestions,
             createdAt: data.created_at,
             updatedAt: data.updated_at
           });
@@ -189,6 +211,11 @@ const QuizViewer = () => {
       setIsSaving(true);
       
       try {
+        // Properly format the content as a JSON object
+        const quizContent: Json = {
+          questions: quiz.questions
+        };
+        
         const { data, error } = await supabase
           .from("content")
           .insert({
@@ -198,7 +225,7 @@ const QuizViewer = () => {
             subject: quiz.subject,
             grade_level: quiz.grade,
             bloom_tags: quiz.questions.map(q => q.bloomLevel),
-            content: { questions: quiz.questions },
+            content: quizContent,
             status: "published"
           })
           .select()
